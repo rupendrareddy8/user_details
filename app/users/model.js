@@ -4,7 +4,10 @@ config.increment.initialize(config.db);
 
 const userSchema = new config.mongoose.Schema({
   name: String,
-  mobile: String,
+  mobile: {
+    type: String,
+    unique: true
+  },
   email: String,
   address: {
     street: String,
@@ -28,4 +31,5 @@ const userSchema = new config.mongoose.Schema({
 });
 
 userSchema.plugin(config.paginate);
+userSchema.index({"address.location.coordinates":"2dsphere"});
 module.exports = config.mongoose.model('users',userSchema)

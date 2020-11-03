@@ -2,10 +2,17 @@ const config = require('../config/routes.js');
 const collection = require('./model.js')
 const router = config.express.Router();
 const functions = require('./functions.js')
-
+const validators = require('./validators.js')
 
 //Api to create a new user
-router.post('/create-new-user', function(req, res) {
+router.post('/users', function(req, res) {
+
+  //validationg the request data
+  const { errors, isValid } = validators.userValidator(req.body);
+  if (!isValid) {
+    return res.status(400).json(errors);
+  }
+  
   let dataObj = {
     name: req.body.name,
     mobile: req.body.mobile,
@@ -13,7 +20,7 @@ router.post('/create-new-user', function(req, res) {
     address: {
       street: req.body.street,
       locality: req.body.locality,
-      city: req.body.locality,
+      city: req.body.city,
       state: req.body.state,
       pincode: req.body.pincode,
       location: { type: "String", coordinates: [ req.body.longitude, req.body.latitude ] }
@@ -30,7 +37,7 @@ router.post('/create-new-user', function(req, res) {
 
 
 //Api to get all registered users data
-router.get('/all-users', function(req, res) {
+router.get('/users', function(req, res) {
   // Create Options
   let options = { sort: '-createdAt' };
   options.page = (req.query.page)? Number(req.query.page): 1;
@@ -40,6 +47,21 @@ router.get('/all-users', function(req, res) {
   //Create Query
 
   let query = {}
+
+  //search by mobile number
+  if(req.query.mobile) query["mobile"] = { $regex: `^${req.query.mobile}`}
+
+  if(req.query.longitude && req.query.latitude) {
+    query["address.location.coordinates"] = {
+      $near: {
+        $maxDistance: 1000,
+        $geometry: {
+          type: "String",
+          coordinates: [Number(req.query.longitude), Number(req.query.latitude)]
+        }
+      }
+    }
+  }
 
   //Query to get user's data
   collection.paginate(query, options, function(err, response) {
